@@ -46,6 +46,10 @@ public class CarController : MonoBehaviour
 
     private float Flong;
 
+
+    [SerializeField] GameObject[] cameras;
+    private int actualCamera = 0;
+
     private void Start()
     {
         rb = GetComponent<Rigidbody>();
@@ -60,6 +64,7 @@ public class CarController : MonoBehaviour
             wheelRl.motorTorque = 0;
             wheelRr.motorTorque = 0;
         }
+        changeCamera();
     }
 
     void FixedUpdate()
@@ -92,6 +97,34 @@ public class CarController : MonoBehaviour
             m_verticalInput = 0;
         }
         m_horizontalInput = Input.GetAxis("Horizontal");
+    }
+
+    private void changeCamera()
+    {
+        if (Input.GetButtonDown("Camera"))
+        {
+            if (actualCamera != cameras.Length - 1)
+            {
+                actualCamera++;
+            }
+            else
+            {
+                actualCamera = 0;
+            }
+            print(actualCamera);   
+        }
+
+        for (int i = 0; i < cameras.Length; i++)
+        {
+            if (i == actualCamera)
+            {
+                cameras[i].gameObject.SetActive(true);
+            }
+            else
+            {
+                cameras[i].gameObject.SetActive(false);
+            }
+        }
     }
 
     private void showDebbug()
