@@ -26,16 +26,15 @@ public class CarController : MonoBehaviour
     public float cDrag = 0.37f;
     public float fSpeed;
 
-    private float motorForce = 1000f;
-
     [Header("Power Trail")]
 
     public TextMeshProUGUI wheelTorqueText;
     public TextMeshProUGUI carSpeedText;
-    public TextMeshProUGUI rpmText;
     public TextMeshProUGUI fLongText;
     public TextMeshProUGUI LWTText;
     public TextMeshProUGUI RWTText;
+
+    EngineControl engineController;
 
     public float wheelRadius;
     public float hp;
@@ -43,15 +42,16 @@ public class CarController : MonoBehaviour
     private float wheelRotationRate;
     private float rpm;
     private float wheelTorque;
+    private float motorForce = 1000f;
 
     private float Flong;
-
 
     [SerializeField] GameObject[] cameras;
     private int actualCamera = 0;
 
     private void Start()
-    {
+    {  
+        engineController = GetComponent<EngineControl>();
         rb = GetComponent<Rigidbody>();
         rb.centerOfMass = com;
     }
@@ -64,6 +64,8 @@ public class CarController : MonoBehaviour
             wheelRl.motorTorque = 0;
             wheelRr.motorTorque = 0;
         }
+        engineController.throttle = m_verticalInput;
+
         changeCamera();
     }
 
@@ -130,9 +132,8 @@ public class CarController : MonoBehaviour
     private void showDebbug()
     {
         // debug data
-        wheelTorqueText.text = wheelTorque.ToString();
+        wheelTorqueText.text = Flong.ToString();
         carSpeedText.text = rb.velocity.magnitude.ToString();
-        rpmText.text = rpm.ToString();
         fLongText.text = m_verticalInput.ToString();
 
         LWTText.text = wheelRl.motorTorque.ToString();
@@ -142,9 +143,13 @@ public class CarController : MonoBehaviour
     private void TractionForce()
     {
         wheelRotationRate = rb.velocity.magnitude/wheelRadius;
+        engineController.wheelRotationRate = wheelRotationRate;    
 
         // 2.25f + 0.5f is the differential ratio (first gear + 0.5f)
-        rpm = (((wheelRotationRate * 2.25f * (2.25f + 0.5f)) * 60) / 6.28318530718f)* m_verticalInput;
+        rpm = (((wheelRotationRate * 2.25f * (4.22f)) * 60) / 6.28318530718f) * m_verticalInput;
+
+        if (rpm < 1000) { rpm = 1000; }
+
         wheelTorque = ((hp / rpm) * 5252);
 
         Flong = ((((hp / rpm) * 5252) + fDrag.x + ((cDrag * 30)) + 2.25f) / 0.3f);
@@ -154,10 +159,17 @@ public class CarController : MonoBehaviour
     {
 
         // in newton meters
-        wheelRl.motorTorque = m_verticalInput * motorForce;
-        wheelRr.motorTorque = m_verticalInput * motorForce;
-        wheelFl.motorTorque = m_verticalInput * (motorForce / 2);
-        wheelFr.motorTorque = m_verticalInput * (motorForce / 2);
+        if (m_verticalInput < 0)
+        {
+            wheelRl.motorTorque = -engineController.actualTorque;
+            wheelRr.motorTorque = -engineController.actualTorque;
+        } else
+        {
+            wheelRl.motorTorque = engineController.actualTorque;
+            wheelRr.motorTorque = engineController.actualTorque;
+        }
+        // wheelFl.motorTorque = engineController.actualTorque;
+        // wheelFr.motorTorque = engineController.actualTorque;
 
         velocity = GetComponent<Rigidbody>().velocity;
         fSpeed = Mathf.Sqrt(velocity.x * velocity.x + velocity.y * velocity.y);
