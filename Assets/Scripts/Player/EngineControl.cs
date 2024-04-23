@@ -11,7 +11,7 @@ public class Gear
 }
 
 public class EngineControl : MonoBehaviour
-{ 
+{
     float rpm = 0;
     float maxRpm = 6500; // max rpm of porsche 930
     public float throttle;
@@ -24,7 +24,7 @@ public class EngineControl : MonoBehaviour
 
     Rigidbody rb;
     public float wheelRotationRate;
-    
+
     // text values
     [SerializeField] TextMeshProUGUI rpmText;
     [SerializeField] TextMeshProUGUI actualGearText;
@@ -67,47 +67,41 @@ public class EngineControl : MonoBehaviour
 
     private void calculateRpm()
     {
-
-        if (rb.velocity.magnitude <= 0.01f)
+        if (throttle > 0)
         {
+            // Calculate rpm when throttle is pressed
             rpm = maxRpm * throttle;
+
+            // Evaluate torque curve only when throttle is pressed
+            actualTorque = throttle * 1000;
         }
         else
         {
-            rpm = (((wheelRotationRate * gearBox[actualGearIndex].gearRatio * (4.22f)) * 60) / 6.28318530718f);
-        }
-
-        if (rpm > maxRpm) 
-        { 
-            rpm = maxRpm;
+            // When throttle is released, stop increasing rpm and torque
+            rpm = 0;
             actualTorque = 0;
-        } else
-        {
-            actualTorque = (float)(torqueCurve.Evaluate(rpm / 1000) * 100 * gearBox[actualGearIndex].gearRatio * 4.22f * 0.7f / 0.26);
         }
 
-        if (actualGear != "N")
-        {
-            if (rpm < 1000) { rpm = 1000; }
-        }
-        else
-        {
-            rpm = maxRpm * throttle;
-        }
+        // Clamp rpm to maxRpm
+        rpm = Mathf.Clamp(rpm, 0, maxRpm);
 
-        
-
+        // Update UI text
         rpmText.text = rpm.ToString();
-        if (throttle >= -0.1 && throttle <= 0.1)
+
+        // Reset throttle and torque if throttle is close to zero
+        if (Mathf.Abs(throttle) <= 0.1f)
         {
             throttle = 0;
             actualTorque = 0;
         }
 
+        // Reverse torque if in reverse gear
         if (actualGear == "R")
         {
             actualTorque *= -1;
         }
+
+        print(actualTorque);
 
     }
 }

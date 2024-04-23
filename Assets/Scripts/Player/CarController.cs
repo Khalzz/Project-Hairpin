@@ -42,6 +42,7 @@ public class CarController : MonoBehaviour
     private float wheelRotationRate;
     private float rpm;
     private float wheelTorque;
+    private float maxBrakeTorque = 100000f;
     private float motorForce = 1000f;
 
     private float Flong;
@@ -71,17 +72,24 @@ public class CarController : MonoBehaviour
 
     void FixedUpdate()
     {
+        print(wheelRl.motorTorque);
         GetInput();
         Accelerate();
         Steer();
         updateWheelPoses();
         TractionForce();
+        ApplyDrag();
         showDebbug();
+    }
 
-        velocity = GetComponent<Rigidbody>().velocity;
-        fSpeed = Mathf.Sqrt(velocity.x * velocity.x + velocity.y * velocity.y);
-        fDrag.x = -cDrag * velocity.x * fSpeed;
-        fDrag.z = -cDrag * velocity.z * fSpeed;
+    public void ApplyDrag()
+    {
+        Vector3 velocity = rb.velocity;
+        float fSpeed = velocity.magnitude;
+        Vector3 fDrag = -cDrag * velocity.normalized * fSpeed; // Drag force opposes velocity
+
+        // Apply the drag force to the rigidbody
+        rb.AddForce(fDrag, ForceMode.Force);
     }
 
     public void GetInput()
@@ -113,7 +121,6 @@ public class CarController : MonoBehaviour
             {
                 actualCamera = 0;
             }
-            print(actualCamera);   
         }
 
         for (int i = 0; i < cameras.Length; i++)
@@ -142,15 +149,7 @@ public class CarController : MonoBehaviour
 
     private void TractionForce()
     {
-        wheelRotationRate = rb.velocity.magnitude/wheelRadius;
-        engineController.wheelRotationRate = wheelRotationRate;    
-
-        // 2.25f + 0.5f is the differential ratio (first gear + 0.5f)
-        rpm = (((wheelRotationRate * 2.25f * (4.22f)) * 60) / 6.28318530718f) * m_verticalInput;
-
-        if (rpm < 1000) { rpm = 1000; }
-
-        wheelTorque = ((hp / rpm) * 5252);
+        
 
         Flong = ((((hp / rpm) * 5252) + fDrag.x + ((cDrag * 30)) + 2.25f) / 0.3f);
     }
@@ -158,23 +157,38 @@ public class CarController : MonoBehaviour
     private void Accelerate()
     {
 
-        // in newton meters
-        if (m_verticalInput < 0)
+        if (m_verticalInput > 0)
         {
-            wheelRl.motorTorque = -engineController.actualTorque;
-            wheelRr.motorTorque = -engineController.actualTorque;
-        } else
-        {
+            // Acceleration
             wheelRl.motorTorque = engineController.actualTorque;
             wheelRr.motorTorque = engineController.actualTorque;
+        }
+        else if (m_verticalInput < 0)
+        {
+            // Braking: Apply braking torque to slow down the wheels
+            wheelRl.brakeTorque = maxBrakeTorque * -m_verticalInput;
+            wheelRr.brakeTorque = maxBrakeTorque * -m_verticalInput;
+            wheelFl.brakeTorque = maxBrakeTorque * -m_verticalInput;
+            wheelFr.brakeTorque = maxBrakeTorque * -m_verticalInput;
+        }
+        
+        if (m_verticalInput == 0)
+        {
+            // No throttle or brake input: Set torque to 0
+            wheelRl.motorTorque = 0;
+            wheelRr.motorTorque = 0;
+            wheelRl.brakeTorque = 0; // Apply slight brake torque to prevent rolling
+            wheelRr.brakeTorque = 0; // Apply slight brake torque to prevent rolling
+            wheelFl.brakeTorque = 0;
+            wheelFr.brakeTorque = 0;
         }
         // wheelFl.motorTorque = engineController.actualTorque;
         // wheelFr.motorTorque = engineController.actualTorque;
 
-        velocity = GetComponent<Rigidbody>().velocity;
-        fSpeed = Mathf.Sqrt(velocity.x * velocity.x + velocity.y * velocity.y);
-        fDrag.x = -cDrag * velocity.x * fSpeed;
-        fDrag.z = -cDrag * velocity.z * fSpeed;
+        // wheelFl.motorTorque = engineController.actualTorque;
+        // wheelFr.motorTorque = engineController.actualTorque;
+
+
 
         // print(fDrag);
     }
