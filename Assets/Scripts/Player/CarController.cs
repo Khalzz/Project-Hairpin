@@ -163,7 +163,7 @@ public class CarController : MonoBehaviour
             wheelRl.motorTorque = engineController.actualTorque;
             wheelRr.motorTorque = engineController.actualTorque;
         }
-        else if (m_verticalInput < 0)
+        if (m_verticalInput < 0)
         {
             // Braking: Apply braking torque to slow down the wheels
             wheelRl.brakeTorque = maxBrakeTorque * -m_verticalInput;
